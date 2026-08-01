@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  instagramId       String?   @unique
+  instagramUsername String?   @unique
+  accessToken       String?
+  longLivedToken    String?
+  tokenExpiresAt    DateTime?
+  createdAt         DateTime  @default(now())
+  posts             Post[]
+  blogSettings      BlogSettings?
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  instagramId  String   @unique
+  userId       String
+  caption      String?
+  mediaType    String
+  mediaUrl     String?
+  thumbnailUrl String?
+  permalink    String
+  timestamp    DateTime
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  published    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BlogSettings {
+  id          String @id @default(cuid())
+  userId      String @unique
+  title       String @default("My Blog")
+  description String @default("Welcome to my content hub")
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
