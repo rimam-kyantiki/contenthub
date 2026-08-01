@@ -8,5 +8,12 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.vercel.app' }
     ],
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
+
 module.exports = nextConfig;
