@@ -16,29 +16,28 @@ export const authOptions: NextAuthOptions = {
         },
       },
       token: {
-        url: "https://graph.facebook.com/v18.0/oauth/access_token",
         async request(context: any) {
-          const body = new URLSearchParams();
-          body.append("client_id", String(context.client.client_id));
-          body.append("client_secret", String(context.client.client_secret));
-          body.append("grant_type", "authorization_code");
-          body.append("code", String(context.params.code));
-          body.append("redirect_uri", String(context.params.redirect_uri));
+          const url = new URL("https://graph.facebook.com/v18.0/oauth/access_token");
+          url.searchParams.set("client_id", String(context.client.client_id));
+          url.searchParams.set("client_secret", String(context.client.client_secret));
+          url.searchParams.set("grant_type", "authorization_code");
+          url.searchParams.set("code", String(context.params.code));
+          url.searchParams.set("redirect_uri", String(context.params.redirect_uri));
 
-          const response = await fetch("https://graph.facebook.com/v18.0/oauth/access_token", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: body,
-          });
+          const response = await fetch(url.toString());
           const tokens = await response.json();
+
+          if (tokens.error) {
+            throw new Error(`Facebook token error: ${JSON.stringify(tokens.error)}`);
+          }
+
           return { tokens };
         },
       },
       userinfo: {
-        url: "https://graph.instagram.com/me",
         async request(context: any) {
-          const url = new URL("https://graph.instagram.com/me");
-          url.searchParams.set("fields", "id,username,account_type");
+          const url = new URL("https://graph.facebook.com/v18.0/me");
+          url.searchParams.set("fields", "id,name");
           url.searchParams.set("access_token", context.tokens.access_token);
           const response = await fetch(url.toString());
           return await response.json();
@@ -47,11 +46,11 @@ export const authOptions: NextAuthOptions = {
       profile(profile: any) {
         return {
           id: profile.id,
-          name: profile.username,
+          name: profile.name,
           email: null,
           image: null,
-          instagramId: profile.id,
-          instagramUsername: profile.username,
+          instagramId: null,
+          instagramUsername: null,
         };
       },
       clientId: process.env.INSTAGRAM_CLIENT_ID!,
@@ -60,29 +59,59 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider === "instagram" && (user as any).instagramId) {
-        await db.user.upsert({
-          where: { instagramId: (user as any).instagramId },
-          update: {
-            name: user.name,
-            instagramUsername: (user as any).instagramUsername,
-            accessToken: account.access_token as string,
-          },
-          create: {
-            instagramId: (user as any).instagramId,
-            name: user.name,
-            instagramUsername: (user as any).instagramUsername,
-            accessToken: account.access_token as string,
-            blogSettings: {
-              create: {
-                title: `${user.name}'s Blog`,
-                description: "All my Instagram content in one place",
+      if (account?.provider === "instagram" && account.access_token) {
+        try {
+          // Fetch the Instagram Business account linked to this Facebook user
+          const igResponse = await fetch(
+            `https://graph.facebook.com/v18.0/me?fields=instagram_business_account{username,id}&access_token=${account.access_token}`
+          );
+          const igData = await igResponse.json();
+          const igAccount = igData?.instagram_business_account;
+
+          if (!igAccount) {
+            console.error("No Instagram Business account linked to this Facebook user.");
+            return false;
+          }
+
+          // Upsert user in database using instagramId
+          const dbUser = await db.user.upsert({
+            where: { instagramId: igAccount.id },
+            update: {
+              name: igAccount.username,
+              instagramUsername: igAccount.username,
+              accessToken: account.access_token,
+            },
+            create: {
+              instagramId: igAccount.id,
+              name: igAccount.username,
+              instagramUsername: igAccount.username,
+              accessToken: account.access_token,
+              blogSettings: {
+                create: {
+                  title: `${igAccount.username}'s Blog`,
+                  description: "All my Instagram content in one place",
+                },
               },
             },
-          },
-        });
+          });
+
+          // Pass the database ID forward so JWT/session work correctly
+          (user as any).dbId = dbUser.id;
+          (user as any).instagramId = igAccount.id;
+          (user as any).instagramUsername = igAccount.username;
+          user.name = igAccount.username;
+        } catch (error) {
+          console.error("SignIn callback error:", error);
+          return false;
+        }
       }
       return true;
+    },
+    async jwt({ token, user }) {
+      if (user && (user as any).dbId) {
+        token.sub = (user as any).dbId;
+      }
+      return token;
     },
     async session({ session, token }) {
       if (token.sub) {
@@ -95,10 +124,6 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return session;
-    },
-    async jwt({ token, user }) {
-      if (user) token.sub = user.id;
-      return token;
     },
   },
   pages: { signIn: "/login" },
