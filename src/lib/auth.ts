@@ -7,6 +7,7 @@ export const authOptions: NextAuthOptions = {
       id: "instagram",
       name: "Instagram",
       type: "oauth",
+      checks: ["none"],
       version: "2.0",
       authorization: {
         url: "https://www.facebook.com/v18.0/dialog/oauth",
