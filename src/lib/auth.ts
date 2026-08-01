@@ -9,14 +9,14 @@ export const authOptions: NextAuthOptions = {
       type: "oauth",
       version: "2.0",
       authorization: {
-        url: "https://www.instagram.com/oauth/authorize",
+        url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
           scope: "instagram_business_basic",
           response_type: "code",
         },
       },
       token: {
-        url: "https://api.instagram.com/oauth/access_token",
+        url: "https://graph.facebook.com/v18.0/oauth/access_token",
         async request(context: any) {
           const body = new URLSearchParams();
           body.append("client_id", String(context.client.client_id));
@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
           body.append("code", String(context.params.code));
           body.append("redirect_uri", String(context.params.redirect_uri));
 
-          const response = await fetch("https://api.instagram.com/oauth/access_token", {
+          const response = await fetch("https://graph.facebook.com/v18.0/oauth/access_token", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: body,
