@@ -11,7 +11,7 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
-          scope: "instagram_business_basic",
+          scope: "instagram_basic",
           response_type: "code",
         },
       },
