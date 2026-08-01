@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextAuthOptions } from "next-auth";
 import { db } from "./db";
 
@@ -19,16 +18,17 @@ export const authOptions: NextAuthOptions = {
       token: {
         url: "https://api.instagram.com/oauth/access_token",
         async request(context: any) {
+          const body = new URLSearchParams();
+          body.append("client_id", String(context.client.client_id));
+          body.append("client_secret", String(context.client.client_secret));
+          body.append("grant_type", "authorization_code");
+          body.append("code", String(context.params.code));
+          body.append("redirect_uri", String(context.params.redirect_uri));
+
           const response = await fetch("https://api.instagram.com/oauth/access_token", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              client_id: context.client.client_id,
-              client_secret: context.client.client_secret,
-              grant_type: "authorization_code",
-              code: context.params.code,
-              redirect_uri: context.params.redirect_uri,
-            }),
+            body: body,
           });
           const tokens = await response.json();
           return { tokens };
