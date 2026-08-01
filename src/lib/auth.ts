@@ -10,37 +10,19 @@ export const authOptions: NextAuthOptions = {
       version: "2.0",
       authorization: {
         url: "https://www.instagram.com/oauth/authorize",
-        params: { scope: "instagram_business_basic", response_type: "code" },
-      },
-      token: {
-        url: "https://api.instagram.com/oauth/access_token",
-        async request({ client, params, provider }) {
-          const response = await fetch("https://api.instagram.com/oauth/access_token", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              client_id: client.client_id as string,
-              client_secret: client.client_secret as string,
-              grant_type: "authorization_code",
-              code: params.code as string,
-              redirect_uri: params.redirect_uri as string,
-            }),
-          });
-          const tokens = await response.json();
-          return { tokens };
+        params: {
+          scope: "instagram_business_basic",
+          response_type: "code",
         },
       },
+      token: "https://api.instagram.com/oauth/access_token",
       userinfo: {
         url: "https://graph.instagram.com/me",
-        async request({ tokens, provider }) {
-          const url = new URL(provider.userinfo?.url as string);
-          url.searchParams.set("fields", "id,username,account_type");
-          url.searchParams.set("access_token", tokens.access_token as string);
-          const response = await fetch(url.toString());
-          return await response.json();
+        params: {
+          fields: "id,username,account_type",
         },
       },
-      profile(profile, tokens) {
+      profile(profile) {
         return {
           id: profile.id,
           name: profile.username,
@@ -48,7 +30,6 @@ export const authOptions: NextAuthOptions = {
           image: null,
           instagramId: profile.id,
           instagramUsername: profile.username,
-          accessToken: tokens.access_token as string,
         };
       },
       clientId: process.env.INSTAGRAM_CLIENT_ID!,
@@ -70,7 +51,12 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             instagramUsername: user.instagramUsername as string,
             accessToken: account.access_token as string,
-            blogSettings: { create: { title: `${user.name}'s Blog`, description: "All my Instagram content in one place" } },
+            blogSettings: {
+              create: {
+                title: `${user.name}'s Blog`,
+                description: "All my Instagram content in one place",
+              },
+            },
           },
         });
       }
@@ -78,7 +64,9 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token.sub) {
-        const user = await db.user.findUnique({ where: { id: token.sub } });
+        const user = await db.user.findUnique({
+          where: { id: token.sub },
+        });
         if (user) {
           (session.user as any).id = user.id;
           (session.user as any).instagramUsername = user.instagramUsername;
