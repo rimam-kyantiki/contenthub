@@ -19,8 +19,8 @@ export const authOptions: NextAuthOptions = {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
-              client_id: client.client_id,
-              client_secret: client.client_secret,
+              client_id: client.client_id as string,
+              client_secret: client.client_secret as string,
               grant_type: "authorization_code",
               code: params.code as string,
               redirect_uri: params.redirect_uri as string,
