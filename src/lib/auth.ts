@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
       token: {
         url: "https://api.instagram.com/oauth/access_token",
         async request({ client, params, provider }) {
-          const response = await fetch(provider.token?.url as string, {
+          const response = await fetch("https://api.instagram.com/oauth/access_token", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
