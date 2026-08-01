@@ -19,11 +19,11 @@ export const authOptions: NextAuthOptions = {
         url: "https://api.instagram.com/oauth/access_token",
         async request(context: any) {
           const body = new URLSearchParams();
-            body.append("client_id", String(context.client.client_id));
-            body.append("client_secret", String(context.client.client_secret));
-            body.append("grant_type", "authorization_code");
-            body.append("code", String(context.params.code));
-            body.append("redirect_uri", String(context.params.redirect_uri));
+          body.append("client_id", String(context.client.client_id));
+          body.append("client_secret", String(context.client.client_secret));
+          body.append("grant_type", "authorization_code");
+          body.append("code", String(context.params.code));
+          body.append("redirect_uri", String(context.params.redirect_uri));
 
           const response = await fetch("https://api.instagram.com/oauth/access_token", {
             method: "POST",
